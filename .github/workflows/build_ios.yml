@@ -31,8 +31,9 @@ jobs:
         working-directory: plugins/rhttp
         run: dart pub get
 
-      - name: Install flutter_rust_bridge dependencies
-        run: dart pub global activate flutter_rust_bridge
+      - name: Install flutter_rust_bridge_cli
+        run: |
+          cargo install flutter_rust_bridge_cli
 
       - name: Generate rhttp freezed files
         working-directory: plugins/rhttp
@@ -41,7 +42,7 @@ jobs:
       - name: Generate rhttp FFI bindings
         working-directory: plugins/rhttp
         run: |
-          dart pub global run flutter_rust_bridge:build
+          flutter_rust_bridge generate
 
       - name: Generate app files
         run: dart run build_runner build --delete-conflicting-outputs
