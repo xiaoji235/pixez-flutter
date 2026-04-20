@@ -1,0 +1,65 @@
+name: Build IOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Build_IOS:
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source ~/.cargo/env
+          rustc --version
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get app dependencies
+        run: flutter pub get
+
+      - name: Get rhttp dependencies
+        working-directory: plugins/rhttp
+        run: dart pub get
+
+      - name: Install flutter_rust_bridge dependencies
+        run: dart pub global activate flutter_rust_bridge
+
+      - name: Generate rhttp freezed files
+        working-directory: plugins/rhttp
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate rhttp FFI bindings
+        working-directory: plugins/rhttp
+        run: |
+          dart pub global run flutter_rust_bridge:build
+
+      - name: Generate app files
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build iOS
+        run: flutter build ios --release --no-codesign
+
+      - name: Create Payload directory and move Runner.app
+        run: |
+          mkdir -p build/ios/iphoneos/Payload
+          mv build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload
+
+      - name: Zip ipa
+        run: |
+          cd build/ios/iphoneos
+          zip -r pixez-ios.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixez-ios.ipa
+          path: build/ios/iphoneos/pixez-ios.ipa
